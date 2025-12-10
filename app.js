@@ -10,6 +10,12 @@ const PORT = process.env.PORT || 3000;
 // Middleware to parse JSON request bodies
 app.use(express.json());
 
+// Import product routes
+const productRoutes = require('./routes/products');
+
+// Register product routes at /products endpoint
+app.use('/products', productRoutes);
+
 // Simple GET route for root path
 app.get('/', (req, res) => {
   // Return a JSON message
