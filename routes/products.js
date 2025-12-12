@@ -29,13 +29,45 @@ router.get('/', async (req, res) => {
 // GET /products/:id
 // Retrieve a single product by ID
 // Returns product details for the specified product ID
-router.get('/:id', (req, res) => {
-  const { id } = req.params;
-  // TODO: Query database for product with matching ID
-  res.json({
-    message: `Get product ${id} - placeholder`,
-    product: null
-  });
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Validate ID is a valid integer
+    const productId = parseInt(id, 10);
+    if (isNaN(productId)) {
+      return res.status(400).json({
+        message: 'Invalid product ID',
+        error: 'Product ID must be a valid integer'
+      });
+    }
+    
+    // Query database for product with matching ID using parameterized query
+    const result = await query(
+      'SELECT id, name, quantity, price, created_at, updated_at FROM products WHERE id = $1',
+      [productId]
+    );
+    
+    // Return 404 if product not found
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        message: 'Product not found',
+        error: `Product with ID ${id} does not exist`
+      });
+    }
+    
+    // Return the product
+    res.json({
+      message: 'Product retrieved successfully',
+      product: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    res.status(500).json({
+      message: 'Error retrieving product',
+      error: error.message
+    });
+  }
 });
 
 // POST /products
