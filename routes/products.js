@@ -138,14 +138,84 @@ router.post('/', async (req, res) => {
 // Update an existing product by ID
 // Accepts updated product data in request body
 // Returns the updated product
-router.put('/:id', (req, res) => {
-  const { id } = req.params;
-  const { name, quantity, price } = req.body;
-  // TODO: Update product in database
-  res.json({
-    message: `Update product ${id} - placeholder`,
-    product: { id, name, quantity, price }
-  });
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, quantity, price } = req.body;
+    
+    // Validate ID is a valid integer
+    const productId = parseInt(id, 10);
+    if (isNaN(productId)) {
+      return res.status(400).json({
+        message: 'Invalid product ID',
+        error: 'Product ID must be a valid integer'
+      });
+    }
+    
+    // Validate required fields
+    if (!name || name.trim() === '') {
+      return res.status(400).json({
+        message: 'Validation error',
+        error: 'Product name is required'
+      });
+    }
+    
+    if (quantity === undefined || quantity === null) {
+      return res.status(400).json({
+        message: 'Validation error',
+        error: 'Quantity is required'
+      });
+    }
+    
+    if (price === undefined || price === null) {
+      return res.status(400).json({
+        message: 'Validation error',
+        error: 'Price is required'
+      });
+    }
+    
+    // Validate data types
+    if (typeof quantity !== 'number' || quantity < 0 || !Number.isInteger(quantity)) {
+      return res.status(400).json({
+        message: 'Validation error',
+        error: 'Quantity must be a non-negative integer'
+      });
+    }
+    
+    if (typeof price !== 'number' || price < 0) {
+      return res.status(400).json({
+        message: 'Validation error',
+        error: 'Price must be a non-negative number'
+      });
+    }
+    
+    // Update product in database using parameterized query
+    // Update updated_at timestamp to current time
+    const result = await query(
+      'UPDATE products SET name = $1, quantity = $2, price = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING id, name, quantity, price, created_at, updated_at',
+      [name.trim(), quantity, price, productId]
+    );
+    
+    // Return 404 if product not found
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        message: 'Product not found',
+        error: `Product with ID ${id} does not exist`
+      });
+    }
+    
+    // Return the updated product
+    res.json({
+      message: 'Product updated successfully',
+      product: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error updating product:', error);
+    res.status(500).json({
+      message: 'Error updating product',
+      error: error.message
+    });
+  }
 });
 
 // DELETE /products/:id
