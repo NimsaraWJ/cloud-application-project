@@ -222,13 +222,46 @@ router.put('/:id', async (req, res) => {
 // Delete a product by ID
 // Removes the product from the database
 // Returns confirmation message
-router.delete('/:id', (req, res) => {
-  const { id } = req.params;
-  // TODO: Delete product from database
-  res.json({
-    message: `Delete product ${id} - placeholder`,
-    success: true
-  });
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Validate ID is a valid integer
+    const productId = parseInt(id, 10);
+    if (isNaN(productId)) {
+      return res.status(400).json({
+        message: 'Invalid product ID',
+        error: 'Product ID must be a valid integer'
+      });
+    }
+    
+    // Delete product from database using parameterized query
+    // Check if product exists by checking rowCount after deletion
+    const result = await query(
+      'DELETE FROM products WHERE id = $1',
+      [productId]
+    );
+    
+    // Return 404 if product not found (no rows were deleted)
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        message: 'Product not found',
+        error: `Product with ID ${id} does not exist`
+      });
+    }
+    
+    // Return success message when deletion succeeds
+    res.json({
+      message: 'Product deleted successfully',
+      success: true
+    });
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    res.status(500).json({
+      message: 'Error deleting product',
+      error: error.message
+    });
+  }
 });
 
 // Export the router for use in app.js
