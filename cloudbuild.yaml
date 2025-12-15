@@ -1,0 +1,20 @@
+steps:
+- name: gcr.io/cloud-builders/npm
+  args: ['ci']
+
+- name: gcr.io/cloud-builders/gcloud
+  entrypoint: bash
+  args:
+    - -c
+    - |
+      set -e
+      DB_URL="$(gcloud secrets versions access latest --secret=DATABASE_URL --project=project-6c0d0bce-1897-4806-852)"
+      apt-get update -y
+      apt-get install -y postgresql-client
+      psql "$DB_URL" -f migrations/init.sql
+
+- name: gcr.io/cloud-builders/gcloud
+  args: ['app', 'deploy', '--quiet']
+
+timeout: 1200s
+
