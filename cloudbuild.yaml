@@ -10,7 +10,7 @@ steps:
       set -e
 
       # Fetch DATABASE_URL from Secret Manager
-      DB_URL="$(gcloud secrets versions access latest --secret=DATABASE_URL)"
+      DB_URL="$$(gcloud secrets versions access latest --secret=DATABASE_URL)"
 
       # Download Cloud SQL Auth Proxy
       curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.11.4/cloud-sql-proxy.linux.amd64
@@ -21,7 +21,7 @@ steps:
       sleep 10
 
       # Run database migration
-      psql "$DB_URL" -f migrations/init.sql
+      psql "$$DB_URL" -f migrations/init.sql
 
 - name: gcr.io/cloud-builders/gcloud
   args:
