@@ -100,7 +100,8 @@ router.post('/', async (req, res) => {
       });
     }
     
-    // Validate data types
+    // Validate data types and constraints
+    // Quantity must be a whole number (integer) and cannot be negative
     if (typeof quantity !== 'number' || quantity < 0 || !Number.isInteger(quantity)) {
       return res.status(400).json({
         message: 'Validation error',
@@ -108,6 +109,7 @@ router.post('/', async (req, res) => {
       });
     }
     
+    // Price must be a number and cannot be negative
     if (typeof price !== 'number' || price < 0) {
       return res.status(400).json({
         message: 'Validation error',
@@ -174,7 +176,8 @@ router.put('/:id', async (req, res) => {
       });
     }
     
-    // Validate data types
+    // Validate data types and constraints
+    // Quantity must be a whole number (integer) and cannot be negative
     if (typeof quantity !== 'number' || quantity < 0 || !Number.isInteger(quantity)) {
       return res.status(400).json({
         message: 'Validation error',
@@ -182,6 +185,7 @@ router.put('/:id', async (req, res) => {
       });
     }
     
+    // Price must be a number and cannot be negative
     if (typeof price !== 'number' || price < 0) {
       return res.status(400).json({
         message: 'Validation error',
