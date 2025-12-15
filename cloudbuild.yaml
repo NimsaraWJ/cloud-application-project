@@ -10,28 +10,53 @@ steps:
       set -e
 
       # Install PostgreSQL client
-      apt-get update -y
-      apt-get install -y postgresql-client
+      apt-get update -y && apt-get install -y postgresql-client
 
       # Fetch DATABASE_URL from Secret Manager
       DB_URL="$$(gcloud secrets versions access latest --secret=DATABASE_URL --project=project-6c0d0bce-1897-4806-852)"
       
-      # Extract credentials from DATABASE_URL
-      # Format: postgresql://user:password@/database?host=/cloudsql/...
+      # Extract credentials from DATABASE_URL (format: postgresql://user:password@/database?host=/cloudsql/...)
       DB_USER="postgres"
       DB_PASS=$$(echo "$$DB_URL" | sed -n 's|.*://postgres:\([^@]*\)@.*|\1|p')
       DB_NAME="inventory_db"
 
+      # Validate extracted values
+      if [ -z "$$DB_PASS" ]; then
+        echo "ERROR: Failed to extract password from DATABASE_URL"
+        exit 1
+      fi
+
       # Download Cloud SQL Auth Proxy
-      curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.11.4/cloud-sql-proxy.linux.amd64
+      curl -L -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.11.4/cloud-sql-proxy.linux.amd64
       chmod +x cloud-sql-proxy
 
       # Start Cloud SQL Proxy in TCP mode on localhost:5432
       ./cloud-sql-proxy --port=5432 project-6c0d0bce-1897-4806-852:asia-southeast1:inventory-postgres &
-      sleep 10
+      PROXY_PID=$$!
+      
+      # Wait for proxy to be ready (max 30 seconds)
+      for i in {1..30}; do
+        if nc -z 127.0.0.1 5432 2>/dev/null; then
+          echo "Cloud SQL Proxy is ready"
+          break
+        fi
+        if [ $$i -eq 30 ]; then
+          echo "ERROR: Cloud SQL Proxy failed to start"
+          kill $$PROXY_PID 2>/dev/null || true
+          exit 1
+        fi
+        sleep 1
+      done
 
       # Run database migration using TCP connection
-      PGPASSWORD="$$DB_PASS" psql -h 127.0.0.1 -p 5432 -U "$$DB_USER" -d "$$DB_NAME" -f migrations/init.sql
+      PGPASSWORD="$$DB_PASS" psql -h 127.0.0.1 -p 5432 -U "$$DB_USER" -d "$$DB_NAME" -f migrations/init.sql || {
+        echo "ERROR: Migration failed"
+        kill $$PROXY_PID 2>/dev/null || true
+        exit 1
+      }
+
+      # Cleanup
+      kill $$PROXY_PID 2>/dev/null || true
 
 - name: gcr.io/cloud-builders/gcloud
   args:
