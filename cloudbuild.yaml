@@ -29,4 +29,7 @@ steps:
     - deploy
     - --quiet
 
+options:
+  logging: CLOUD_LOGGING_ONLY
+
 timeout: 1200s
