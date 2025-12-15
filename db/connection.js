@@ -51,10 +51,16 @@ async function initializePool() {
   }
 
   const connectionString = await getDatabaseUrl();
+  
+  // Determine SSL configuration
+  // Unix socket connections (Cloud SQL via App Engine) don't support SSL
+  // TCP connections (local development with Cloud SQL Proxy) may need SSL
+  const isUnixSocket = connectionString.includes('/cloudsql/');
+  const sslConfig = isUnixSocket ? false : (process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false);
+  
   pool = new Pool({
     connectionString: connectionString,
-    // Enable SSL for production environments (e.g., cloud databases)
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    ssl: sslConfig
   });
 
   // Handle connection errors
