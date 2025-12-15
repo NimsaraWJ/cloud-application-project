@@ -17,17 +17,25 @@ async function getDatabaseUrl() {
       return process.env.DATABASE_URL;
     }
 
-    // In App Engine, fetch from Secret Manager
-    try {
-      const client = new SecretManagerServiceClient();
-      const projectId = process.env.GOOGLE_CLOUD_PROJECT || 'project-6c0d0bce-1897-4806-852';
-      const name = `projects/${projectId}/secrets/DATABASE_URL/versions/latest`;
-      const [version] = await client.accessSecretVersion({ name });
-      return version.payload.data.toString();
-    } catch (error) {
-      console.error('Error fetching DATABASE_URL from Secret Manager:', error);
-      throw new Error('Failed to get DATABASE_URL from Secret Manager: ' + error.message);
+    // Only use Secret Manager in App Engine (when running in production on GCP)
+    // Check if we're actually running on App Engine, not just if GOOGLE_CLOUD_PROJECT is set
+    const isAppEngine = process.env.GAE_SERVICE || process.env.GAE_INSTANCE || 
+                       (process.env.GOOGLE_CLOUD_PROJECT && process.env.NODE_ENV === 'production');
+    
+    if (isAppEngine) {
+      try {
+        const client = new SecretManagerServiceClient();
+        const projectId = process.env.GOOGLE_CLOUD_PROJECT || 'project-6c0d0bce-1897-4806-852';
+        const name = `projects/${projectId}/secrets/DATABASE_URL/versions/latest`;
+        const [version] = await client.accessSecretVersion({ name });
+        return version.payload.data.toString();
+      } catch (error) {
+        console.error('Error fetching DATABASE_URL from Secret Manager:', error);
+        throw new Error('Failed to get DATABASE_URL from Secret Manager: ' + error.message);
+      }
     }
+
+    throw new Error('DATABASE_URL not found. Please set DATABASE_URL environment variable for local development.');
   })();
 
   return databaseUrlPromise;
