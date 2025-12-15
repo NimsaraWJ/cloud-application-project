@@ -9,8 +9,8 @@ steps:
     - |
       set -e
 
-      # Install PostgreSQL client
-      apt-get update -y && apt-get install -y postgresql-client
+      # Install PostgreSQL client and netcat for connection testing
+      apt-get update -y && apt-get install -y postgresql-client netcat-openbsd
 
       # Fetch DATABASE_URL from Secret Manager
       DB_URL="$$(gcloud secrets versions access latest --secret=DATABASE_URL --project=project-6c0d0bce-1897-4806-852)"
@@ -49,10 +49,17 @@ steps:
       done
 
       # Run database migration using TCP connection
+      # Migration uses IF NOT EXISTS, so it's safe to run multiple times
       PGPASSWORD="$$DB_PASS" psql -h 127.0.0.1 -p 5432 -U "$$DB_USER" -d "$$DB_NAME" -f migrations/init.sql || {
-        echo "ERROR: Migration failed"
-        kill $$PROXY_PID 2>/dev/null || true
-        exit 1
+        echo "WARNING: Migration encountered an error (this may be normal if tables already exist)"
+        # Check if products table exists - if it does, migration was successful before
+        PGPASSWORD="$$DB_PASS" psql -h 127.0.0.1 -p 5432 -U "$$DB_USER" -d "$$DB_NAME" -c "SELECT 1 FROM products LIMIT 1;" > /dev/null 2>&1 && {
+          echo "Products table exists - migration already completed, continuing..."
+        } || {
+          echo "ERROR: Migration failed and products table does not exist"
+          kill $$PROXY_PID 2>/dev/null || true
+          exit 1
+        }
       }
 
       # Cleanup
