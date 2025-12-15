@@ -16,9 +16,9 @@ const productRoutes = require('./routes/products');
 // Register product routes at /products endpoint
 app.use('/products', productRoutes);
 
-// Simple GET route for root path
+// Health check endpoint - root path
+// Returns a simple JSON response to verify the server is running
 app.get('/', (req, res) => {
-  // Return a JSON message
   res.json({
     message: 'Welcome to Cloud Application Project',
     status: 'success'

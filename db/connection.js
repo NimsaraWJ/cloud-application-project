@@ -3,6 +3,7 @@ const { Pool } = require('pg');
 
 // Create a connection pool using DATABASE_URL from environment variables
 // DATABASE_URL format: postgresql://user:password@host:port/database
+// Note: DATABASE_URL must be set in environment variables before starting the application
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   // Enable SSL for production environments (e.g., cloud databases)
