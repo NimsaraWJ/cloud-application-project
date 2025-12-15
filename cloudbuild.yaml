@@ -10,6 +10,8 @@ steps:
   args:
     - app
     - deploy
+    - app.yaml
+    - --region=asia-southeast1
     - --quiet
 
 options:
