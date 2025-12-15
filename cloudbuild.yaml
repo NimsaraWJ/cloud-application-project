@@ -11,6 +11,7 @@ steps:
     - app
     - deploy
     - --quiet
+    - --region=asia-southeast1
 
 options:
   logging: CLOUD_LOGGING_ONLY
